@@ -44,8 +44,8 @@ def Fit(data,debug=False):
 
     #Network Parameters
     n_hidden_1 = 260
-    n_hidden_2 = 260
-    n_hidden_3 = 260
+    n_hidden_2 = 160
+    n_hidden_3 = 60
     n_input = numbDim 
     n_classes = numbClasses 
 
