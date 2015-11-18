@@ -4,7 +4,7 @@ import tensorflow as tf
 import seaborn as sns
 import os
 
-sess = tf.InteractiveSession()
+
 
 def getDataTest(data,shuffle=True):
     if shuffle:
@@ -22,9 +22,9 @@ def getDataTest(data,shuffle=True):
     y = np.array(ytemp)
     return [X,y]
 
-def getDataTrainTest(data):
+def getDataTrainTest(data,shuffle=True):
 
-    X,y = getDataTest(data)    
+    X,y = getDataTest(data,shuffle)    
     t = 0.15 #keep 15 percent for testing
     x_train = X[t*len(X):]
     x_test = X[:t*len(X)]
@@ -35,6 +35,7 @@ def getDataTrainTest(data):
 
 def Fit(data,debug=False):
     #2 is hard coded but it should be the number of unique things in y or xy[1]
+    sess = tf.InteractiveSession()
     numbClasses = 2
     numbDim= len(data[0][0])
 
@@ -46,9 +47,9 @@ def Fit(data,debug=False):
     display_step = 1
 
     #Network Parameters
-    n_hidden_1 = 260
-    n_hidden_2 = 160
-    n_hidden_3 = 60
+    n_hidden_1 = 300
+    n_hidden_2 = 200
+    n_hidden_3 = 100
     n_input = numbDim 
     n_classes = numbClasses 
 
@@ -132,10 +133,11 @@ def Predict(predData,data):
     return a 
 
 def test():
-    df = pd.read_csv('../Data/seq_data.csv')
-    xy = getDataTrainTest(df)
+    df = pd.read_csv('../Data/seq_data_300.csv')
+    xy = getDataTrainTest(df,False)
+    print xy[0][0]
+    print df.s299.unique()
     predData = Fit(xy,debug=True)
-    print Predict(predData,[[df.values[1,:-2]]])
 
 def CheckFamillyClan():
     dfTrain = pd.read_csv('../Data/seq_data_train_no_clan.csv')
@@ -146,7 +148,7 @@ def CheckFamillyClan():
     for i in range(len(predData[3][0])):
         print xy[3][i],predData[3][0][i]
 
-def SeedChecking():
+def SeedChecking(folder=''):
     
     dftest = pd.read_csv('../Data/Seed_seq_test.csv')
     dftrain = pd.read_csv('../Data/Seed_seq_train.csv')
@@ -168,7 +170,67 @@ def SeedChecking():
     sns.plt.savefig(path_out)  
 
 
+def CleanData(DataName,output = ''):
+    #Start by looking at the sequence that have intersection/part of 
+    #of a clan 
+    df = pd.read_csv(DataName)
+    a = []
+    d = {}
+    with open('../Data/glm_intersections.txt','r') as inf:
+        for line in inf:
+            l = eval(line)
+            a.append(l)
+            d[l[0]]=1
+            d[l[1]]=1
+    dataTrain = []
+    dataTest = []
 
+    for i in range(len(df)):
+        if df.iloc[i][-2] in d:
+            dataTest.append(df.iloc[i].values)
+        else:
+            dataTrain.append(df.iloc[i].values)
 
+    dataTrain = np.array(dataTrain)
+    dataTest = np.array(dataTest)
+    dfTrain = pd.DataFrame(dataTrain,columns=df.columns)
+    dfTrain.to_csv('../Data/'+output+'seq_data_train_no_clan.csv',index_label=False)
+    dfTest = pd.DataFrame(dataTest,columns=df.columns)
+    dfTest.to_csv('../Data/'+output+'seq_data_test_clan.csv',index_label=False)
+
+    #data set with the seeds 
+    #find the seeds
+    def FindSeeds(seeds,name):
+        with open(name,'r') as inf:
+            for line in inf:
+                l = line.split(' ')
+                if len(l[0])>5:
+                    seeds[l[0]] = 1
+            return seeds
+
+    seeds = {}
+    seeds = FindSeeds(seeds,'../Data/RF00083.stockholm.txt')
+    seeds = FindSeeds(seeds,'../Data/RF00128.stockholm.txt')
+    df = dfTrain
+    dataTrain = []
+    dataTest = []
+
+    for i in range(len(df)):
+        if df.iloc[i][-2] in seeds:
+            dataTest.append(df.iloc[i].values)
+        else:
+            dataTrain.append(df.iloc[i].values)
+
+    dataTrain = np.array(dataTrain)
+    dataTest = np.array(dataTest)
+
+    dfTrain = pd.DataFrame(dataTrain,columns=df.columns)
+    dfTrain.to_csv('../Data/'+output+'seed_seq_train_no_clan.csv',index_label=False)
+
+    dfTest = pd.DataFrame(dataTest,columns=df.columns)
+    dfTest.to_csv('../Data/'+output+'seed_seq_test_no_clan.csv',index_label=False)
 # SeedChecking()
-CheckFamillyClan()
+# CheckFamillyClan()
+# test()
+# CleanData('../Data/seq_data_300.csv','seq_complete/')
+SeedChecking('seq_complete/')
