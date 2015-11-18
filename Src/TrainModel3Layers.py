@@ -1,11 +1,14 @@
 import pandas as pd 
 import numpy as np 
 import tensorflow as tf
+import seaborn as sns
+import os
 
 sess = tf.InteractiveSession()
 
-def getDataTest(data):
-    data = data.reindex(np.random.permutation(data.index))
+def getDataTest(data,shuffle=True):
+    if shuffle:
+        data = data.reindex(np.random.permutation(data.index))
     data = data.values
     X = data[:,:-2]
     y = data[:,-1]
@@ -17,7 +20,7 @@ def getDataTest(data):
         else:
             ytemp.append([0,1])
     y = np.array(ytemp)
-    return (X,y)
+    return [X,y]
 
 def getDataTrainTest(data):
 
@@ -38,7 +41,7 @@ def Fit(data,debug=False):
 
     # Parameters
     learning_rate = 0.0005
-    training_epochs = 10
+    training_epochs = 8
     batch_size = 100
     display_step = 1
 
@@ -76,7 +79,7 @@ def Fit(data,debug=False):
     pred = multilayer_perceptron(x, weights, biases)
     cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(pred, y))
     optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
-    
+    value_accuracy = 0
 
     xy = data
     init = tf.initialize_all_variables()
@@ -90,15 +93,29 @@ def Fit(data,debug=False):
             batch = [xy[0][i:i+batch_size],xy[1][i:i+batch_size]]
             sess.run(optimizer, feed_dict={x: batch[0], y: batch[1]})
             avg_cost += sess.run(cost, feed_dict={x: batch[0], y: batch[1]})/total_batch
+
         if debug is True and epoch % display_step == 0:
            print "Epoch:", '%04d' % (epoch+1), "cost=", "{:.9f}".format(avg_cost)
     # Test trained model
     if debug is True and len(xy)>2:
         correct_prediction = tf.equal(tf.argmax(pred,1), tf.argmax(y,1))
         accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
-        print sess.run(accuracy,feed_dict={x: xy[2], y: xy[3]})
-    
-    return pred,x
+        value_accuracy = sess.run(accuracy,feed_dict={x: xy[2], y: xy[3]})
+        print value_accuracy
+
+
+    # for i in range(len(xy[2])):
+
+
+    values_predicted = [None for i in range(3)]
+    values_predicted[0] = sess.run(tf.argmax(pred,1) ,feed_dict={x:xy[2]})
+    values_predicted[1] = sess.run(pred ,feed_dict={x:xy[2]})
+    values_predicted[2] = sess.run(tf.nn.softmax(pred) ,feed_dict={x:xy[2]})
+
+      
+
+    return pred,x,value_accuracy,values_predicted
+
 
 def Predict(predData,data):
     a = []
@@ -113,10 +130,45 @@ def Predict(predData,data):
         r[2] = sess.run(tf.nn.softmax(pred) ,feed_dict={x:d})
         a.append(r)
     return a 
+
 def test():
     df = pd.read_csv('../Data/seq_data.csv')
     xy = getDataTrainTest(df)
     predData = Fit(xy,debug=True)
     print Predict(predData,[[df.values[1,:-2]]])
 
-test()
+def CheckFamillyClan():
+    dfTrain = pd.read_csv('../Data/seq_data_train_no_clan.csv')
+    dfTest = pd.read_csv('../Data/seq_data_test_clan.csv')
+    xy = getDataTest(dfTrain) + getDataTest(dfTest,False)
+    predData = Fit(xy,debug=True)
+
+    for i in range(len(predData[3][0])):
+        print xy[3][i],predData[3][0][i]
+
+def SeedChecking():
+    
+    dftest = pd.read_csv('../Data/Seed_seq_test.csv')
+    dftrain = pd.read_csv('../Data/Seed_seq_train.csv')
+    # xy = getDataTest(dftrain) + getDataTest(dftest)
+
+    # predData = Fit(xy,debug=True)
+    # for row in dftest.values:
+    #     r = Predict(predData,[[row[:-2]]])
+    #     print 'real',row[-1],":",r[0][0]
+    dist = []
+    n = 100 
+    for i in range(n):
+        xy = getDataTest(dftrain) + getDataTest(dftest)
+
+        dist.append(Fit(xy,debug=True)[2])
+        print dist
+    sns.distplot(dist)
+    path_out = os.path.join('..', 'Results', 'res_seed.pdf')
+    sns.plt.savefig(path_out)  
+
+
+
+
+# SeedChecking()
+CheckFamillyClan()
