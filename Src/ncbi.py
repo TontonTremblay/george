@@ -21,11 +21,11 @@ def ncbi_subsec(name, start, stop):
     except ValueError:
         print "Values Error: ", name, start, stop
         return ''
-    seq = str(record.seq)
+    seq = str(record.seq.complement())
     if start < 1:
         seq = '-'*(abs(start)+1) + seq
     if len(seq) < stop-start:
-        seq += '-'*(stop-start-len(seq))
+        seq += '-'*(stop-start-len(seq)+1)
     return seq
 
 def main():
@@ -46,9 +46,7 @@ def main():
                 pos_r = pos_l + LENGTH-1
                 seq = ncbi_subsec(id, pos_l, pos_r)[::order].replace('T', 'U')
                 if seq:
-                    #out.append(','.join(map(str, map(m, list(seq))) + [name, str(i)])) 
                     f.write(','.join(map(str, map(m, list(seq))) + [name, str(i)]) + '\n')
-            #f.write('\n'.join(out))
 
 if __name__ == '__main__':
     main()
