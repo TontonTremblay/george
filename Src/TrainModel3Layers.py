@@ -44,12 +44,12 @@ def Fit(data,debug=False):
     learning_rate = 0.0005
     training_epochs = 8
     batch_size = 100
-    display_step = 1
+    display_step = 100
 
     #Network Parameters
     n_hidden_1 = 300
-    n_hidden_2 = 200
-    n_hidden_3 = 100
+    n_hidden_2 = 150
+    n_hidden_3 = 75
     n_input = numbDim 
     n_classes = numbClasses 
 
@@ -148,10 +148,10 @@ def CheckFamillyClan():
     for i in range(len(predData[3][0])):
         print xy[3][i],predData[3][0][i]
 
-def SeedChecking(folder=''):
+def SeedCheckingWithNTrains(folder='', n = 100):
     
-    dftest = pd.read_csv('../Data/Seed_seq_test.csv')
-    dftrain = pd.read_csv('../Data/Seed_seq_train.csv')
+    dftest = pd.read_csv('../Data/'+folder+'seed_seq_test_no_clan.csv')
+    dftrain = pd.read_csv('../Data/'+folder+'seed_seq_train_no_clan.csv')
     # xy = getDataTest(dftrain) + getDataTest(dftest)
 
     # predData = Fit(xy,debug=True)
@@ -159,7 +159,6 @@ def SeedChecking(folder=''):
     #     r = Predict(predData,[[row[:-2]]])
     #     print 'real',row[-1],":",r[0][0]
     dist = []
-    n = 100 
     for i in range(n):
         xy = getDataTest(dftrain) + getDataTest(dftest)
 
@@ -169,6 +168,17 @@ def SeedChecking(folder=''):
     path_out = os.path.join('..', 'Results', 'res_seed.pdf')
     sns.plt.savefig(path_out)  
 
+def CheckClanResults(folder=''):
+
+    dftest = pd.read_csv('../Data/'+folder+'seq_data_test_clan.csv')
+    dftrain = pd.read_csv('../Data/'+folder+'seq_data_train_no_clan.csv')
+    xy = getDataTest(dftrain) + getDataTest(dftest,False)
+    predData = Fit(xy,debug=True)
+
+    for i in range(len(predData[3][0])):
+        if i %2 == 0:
+            print "---"
+        print dftest.iloc[i].values[-2],xy[3][i],predData[3][0][i],predData[3][2][i]
 
 def CleanData(DataName,output = ''):
     #Start by looking at the sequence that have intersection/part of 
@@ -191,8 +201,22 @@ def CleanData(DataName,output = ''):
         else:
             dataTrain.append(df.iloc[i].values)
 
+    #This should be smarter, but it is late and I feel lazy
+    dt = [] 
+    for v in a:
+        s0,s1 = v 
+        for i in dataTest:
+            if s0 == i[-2]:
+                dt.append(i)
+                break
+        for i in dataTest:
+            if s1 == i[-2]:
+                dt.append(i)
+                break
+
+
     dataTrain = np.array(dataTrain)
-    dataTest = np.array(dataTest)
+    dataTest = np.array(dt)
     dfTrain = pd.DataFrame(dataTrain,columns=df.columns)
     dfTrain.to_csv('../Data/'+output+'seq_data_train_no_clan.csv',index_label=False)
     dfTest = pd.DataFrame(dataTest,columns=df.columns)
@@ -229,8 +253,12 @@ def CleanData(DataName,output = ''):
 
     dfTest = pd.DataFrame(dataTest,columns=df.columns)
     dfTest.to_csv('../Data/'+output+'seed_seq_test_no_clan.csv',index_label=False)
-# SeedChecking()
+# SeedCheckingWithNTrains()
 # CheckFamillyClan()
 # test()
 # CleanData('../Data/seq_data_300.csv','seq_complete/')
-SeedChecking('seq_complete/')
+# SeedCheckingWithNTrains('seq_complete/',n = 20)
+CheckClanResults('seq_complete/')
+from sklearn.ensemble import RandomForestClassifier
+
+clf = RandomForestClassifier() 
